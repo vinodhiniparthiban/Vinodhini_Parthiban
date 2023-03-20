@@ -1,0 +1,133 @@
+---
+title: "Project two"
+author: "Vinodhini Parthiban"
+date: "2023-03-20"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+```
+
+```{r}
+# Load required libraries
+library(caret)
+library(randomForest)
+library(e1071)
+library(nnet)
+#install.packages("mlbench")
+library(mlbench)
+library(rpart)
+library(class)
+#install.packages("mice")
+library(mice)
+library(caTools)
+#install.packages("modeest")
+library(modeest)
+```
+
+```{r}
+# Load the BreastCancer dataset
+data(BreastCancer)
+str(BreastCancer)
+summary(BreastCancer)
+```
+
+
+```{r}
+BreastCancer <- na.omit(BreastCancer)
+BreastCancer$Id <- NULL
+```
+
+
+```{r}
+# Splitting data into training and test dataset
+set.seed(150)    
+split=sample.split(BreastCancer, SplitRatio = 0.7)  
+train=subset(BreastCancer,split==TRUE)       
+test=subset(BreastCancer,split==FALSE)          
+                              
+```
+
+
+```{r}
+#KNN 
+model1 <- train(Class ~ ., data = train, method = "knn")
+
+#predict
+predict_knn <- predict(model1, test)
+
+#confusion Matrix
+(conf_matrix_knn <- table(predict_knn, test$Class)) 
+confusionMatrix(conf_matrix_knn)
+```
+
+
+```{r}
+#Decision Tree 
+model2 <- rpart(Class ~ ., data=train) 
+
+#predict
+predict_decision_tree <- predict(model2, test, type = "class")
+
+# #Confusion matrix
+(conf_matrix_decision_tree <- table(predict_decision_tree, test$Class))
+confusionMatrix(conf_matrix_decision_tree) 
+```
+
+
+
+```{r}
+#random Forest
+model3 <- randomForest(Class ~ ., data = train, importance=TRUE, ntree = 5) 
+
+#predict
+predict_randomForest <- predict(model3, test)              
+
+# #Confusion matrix
+(conf_matrix_randomForest <- table(predict_randomForest, test$Class))
+confusionMatrix(conf_matrix_randomForest)
+```
+
+```{r}
+#NaiveBayes
+model4 <- naiveBayes(Class ~ ., data = train)  
+
+#predict
+predict_naiveBayes <- predict(model4, test)        
+
+#confusionMatrix
+(conf_matrix_naiveBayes <- table(predict_naiveBayes, test$Class)) 
+confusionMatrix(conf_matrix_naiveBayes) 
+```
+
+
+```{r}
+
+#logistic regression
+model5 <- glm(Class ~ ., data = train, family = "binomial")
+
+#predict
+predict_glm <- predict(model5, test,type='response')
+
+pred_glm <- as.factor(ifelse(predict_glm>0.5, "malignant", "benign"))
+
+confusionMatrix(as.factor(ifelse(predict_glm>0.5, "malignant", "benign")), test$Class)
+
+
+```
+```{r}
+prediction_all <- data.frame(pred_glm,predict_naiveBayes,predict_randomForest,predict_knn,predict_decision_tree)
+prediction_all$ensemble = apply(prediction_all[ ,1:length(prediction_all)], 1, mfv)
+prediction_all
+
+```
+
+```{r}
+confusionMatrix(as.factor(prediction_all$ensemble), test$Class)
+```
+
+
